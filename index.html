@@ -6,7 +6,9 @@
   <title>STM DFU Firmware Updater</title>
   <meta name="description" content="Single-file WebUSB updater for STM DFU devices and ST DfuSe .dfu firmware images.">
   <meta name="author" content="Ivaylo Ilchev">
+  <meta name="theme-color" content="#0d6b63">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="manifest" href="manifest.webmanifest">
   <style>
     :root {
       color-scheme: light;
@@ -128,6 +130,12 @@
       color: var(--accent-strong);
     }
 
+    button.ghost {
+      background: rgba(255, 255, 255, 0.72);
+      color: var(--accent-strong);
+      border: 1px solid rgba(13, 107, 99, 0.2);
+    }
+
     button:hover:enabled {
       transform: translateY(-1px);
       background: var(--accent-strong);
@@ -135,6 +143,10 @@
 
     button.secondary:hover:enabled {
       background: #cbddd4;
+    }
+
+    button.ghost:hover:enabled {
+      background: rgba(255, 255, 255, 0.92);
     }
 
     button:disabled {
@@ -219,6 +231,7 @@
         <div class="actions">
           <button id="connectButton" type="button">Connect Device</button>
           <button id="flashButton" type="button" disabled>Flash Firmware</button>
+          <button id="installButton" type="button" class="ghost" hidden>Install Locally</button>
         </div>
       </article>
 
@@ -279,6 +292,7 @@
       statusLog: document.getElementById("statusLog"),
       connectButton: document.getElementById("connectButton"),
       flashButton: document.getElementById("flashButton"),
+      installButton: document.getElementById("installButton"),
     };
 
     const appState = {
@@ -288,6 +302,7 @@
       interfaceInfo: null,
       alternates: [],
       hasConnectedOnce: false,
+      deferredInstallPrompt: null,
     };
 
     const sleep = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -322,6 +337,10 @@
         return;
       }
       elements.connectButton.textContent = appState.hasConnectedOnce ? "Reconnect Device" : "Connect Device";
+    }
+
+    function updateInstallButton() {
+      elements.installButton.hidden = !appState.deferredInstallPrompt;
     }
 
     function updateFirmwareSummary() {
@@ -1054,6 +1073,24 @@
       log("Firmware update completed.");
     }
 
+    async function installLocally() {
+      if (!appState.deferredInstallPrompt) {
+        log("Install prompt is not available yet. Use Chromium over https or localhost.");
+        return;
+      }
+
+      const installPrompt = appState.deferredInstallPrompt;
+      appState.deferredInstallPrompt = null;
+      updateInstallButton();
+      await installPrompt.prompt();
+      const result = await installPrompt.userChoice;
+      if (result.outcome === "accepted") {
+        log("Local install accepted.");
+      } else {
+        log("Local install dismissed.");
+      }
+    }
+
     elements.firmwareFile.addEventListener("change", async () => {
       try {
         await handleFirmwareSelection();
@@ -1088,8 +1125,38 @@
       }
     });
 
+    elements.installButton.addEventListener("click", async () => {
+      try {
+        await installLocally();
+      } catch (error) {
+        log(error.message, "error");
+      }
+    });
+
+    window.addEventListener("beforeinstallprompt", (event) => {
+      event.preventDefault();
+      appState.deferredInstallPrompt = event;
+      updateInstallButton();
+      log("Install is available. Use 'Install Locally' to add the app.");
+    });
+
+    window.addEventListener("appinstalled", () => {
+      appState.deferredInstallPrompt = null;
+      updateInstallButton();
+      log("App installed locally.");
+    });
+
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("service-worker.js").catch((error) => {
+          log(`Service worker registration failed: ${error.message}`);
+        });
+      });
+    }
+
     log("Ready. Load an ST DfuSe .dfu image, then connect a device in DFU mode.");
     updateConnectButtonLabel();
+    updateInstallButton();
     setBusy(false);
   </script>
 </body>
