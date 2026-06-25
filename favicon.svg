@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="STM DFU updater icon">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#d8e7f6"/>
+      <stop offset="100%" stop-color="#0d6b63"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="url(#bg)"/>
+  <path d="M32 14 19 28h8v10h10V28h8L32 14z" fill="#fff8ef"/>
+  <rect x="22" y="42" width="20" height="8" rx="4" fill="#162433"/>
+  <path d="M27 45h10" stroke="#fff8ef" stroke-width="3" stroke-linecap="round"/>
+</svg>
